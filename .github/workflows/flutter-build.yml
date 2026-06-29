@@ -704,24 +704,15 @@ jobs:
           security default-keychain -s rustdesk.keychain
           security find-identity -v
 
-      - name: Import notarize key
+      - name: Import notarization API key (.p8)
         if: env.MACOS_P12_BASE64 != null
         uses: timheuer/base64-to-file@adaa40c0c581f276132199d4cf60afa07ce60eac # v1.2
         with:
-          # https://gregoryszorc.com/docs/apple-codesign/stable/apple_codesign_rcodesign.html#notarizing-and-stapling
-          fileName: rustdesk.json
+          # App Store Connect API key (.p8). Consumed by `xcrun notarytool` in the
+          # "Codesign app, notarize, staple, create signed dmg" step below.
+          fileName: notary_key.p8
           fileDir: ${{ github.workspace }}
-          encodedString: ${{ secrets.MACOS_NOTARIZE_JSON }}
-
-      - name: Install rcodesign tool
-        if: env.MACOS_P12_BASE64 != null
-        shell: bash
-        run: |
-          pushd /tmp
-          wget https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign%2F0.22.0/apple-codesign-0.22.0-macos-universal.tar.gz
-          tar -zxvf apple-codesign-0.22.0-macos-universal.tar.gz
-          mv apple-codesign-0.22.0-macos-universal/rcodesign /usr/local/bin
-          popd
+          encodedString: ${{ secrets.MACOS_NOTARY_API_KEY_P8_BASE64 }}
 
       - name: Install build runtime
         run: |
@@ -841,23 +832,55 @@ jobs:
           name: rustdesk-unsigned-macos-${{ matrix.job.arch }}
           path: rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.dmg # can not upload the directory directly or tar.gz, which destroy the link structure, causing the codesign failed
 
-      - name: Codesign app and create signed dmg
+      - name: Codesign app, notarize, staple, create signed dmg
         if: env.MACOS_P12_BASE64 != null && env.UPLOAD_ARTIFACT == 'true'
         run: |
           # Patch create-dmg to give more attempts to unmount image
           CREATE_DMG="$(command -v create-dmg)"
           CREATE_DMG="$(readlink -f "$CREATE_DMG")"
           sed -i -e 's/MAXIMUM_UNMOUNTING_ATTEMPTS=3/MAXIMUM_UNMOUNTING_ATTEMPTS=7/' "$CREATE_DMG"
-          # Unlock keychain
+          # Unlock the keychain that holds the Developer ID Application cert
           security default-keychain -s rustdesk.keychain
-          security unlock-keychain -p ${{ secrets.MACOS_P12_PASSWORD }} rustdesk.keychain
-          # start sign the rustdesk.app and dmg
-          rm -rf *.dmg || true
-          codesign --force --options runtime -s ${{ secrets.MACOS_CODESIGN_IDENTITY }} --deep --strict ./flutter/build/macos/Build/Products/Release/RustDesk.app -vvv
-          create-dmg --icon "RustDesk.app" 200 190 --hide-extension "RustDesk.app" --window-size 800 400 --app-drop-link 600 185 rustdesk-${{ env.VERSION }}.dmg ./flutter/build/macos/Build/Products/Release/RustDesk.app
-          codesign --force --options runtime -s ${{ secrets.MACOS_CODESIGN_IDENTITY }} --deep --strict rustdesk-${{ env.VERSION }}.dmg -vvv
-          # notarize the rustdesk-${{ env.VERSION }}.dmg
-          rcodesign notary-submit --api-key-path ${{ github.workspace }}/rustdesk.json  --staple rustdesk-${{ env.VERSION }}.dmg
+          security unlock-keychain -p "${{ secrets.MACOS_P12_PASSWORD }}" rustdesk.keychain
+          # The branded build produces "Ctrl Alt Support.app", NOT "RustDesk.app".
+          # Discover the bundle dynamically instead of hardcoding the old name.
+          APP="$(ls -d ./flutter/build/macos/Build/Products/Release/*.app | head -1)"
+          APP_BN="$(basename "$APP")"
+          echo "Signing app bundle: $APP_BN"
+          # Drop the unsigned dmg built earlier; we rebuild a signed one below.
+          rm -rf ./*.dmg || true
+          # Sign with hardened runtime (required for notarization), a secure
+          # timestamp, and the Release entitlements (mic + JIT). --deep also signs
+          # the embedded `service` binary and helpers inside the bundle (needed for
+          # the in-app "Install system service" LaunchDaemon to load when notarized).
+          codesign --force --options runtime --timestamp \
+            --entitlements ./flutter/macos/Runner/Release.entitlements \
+            -s "${{ secrets.MACOS_CODESIGN_IDENTITY }}" --deep --strict "$APP" -vvv
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          # Notarize the app, then staple the ticket so an app copied OUT of the dmg
+          # is trusted even offline. notarytool needs a zip/dmg/pkg, not a bare .app.
+          ditto -c -k --keepParent "$APP" "${{ github.workspace }}/app-notarize.zip"
+          xcrun notarytool submit "${{ github.workspace }}/app-notarize.zip" \
+            --key "${{ github.workspace }}/notary_key.p8" \
+            --key-id "${{ secrets.MACOS_NOTARY_API_KEY_ID }}" \
+            --issuer "${{ secrets.MACOS_NOTARY_API_ISSUER_ID }}" \
+            --wait
+          xcrun stapler staple "$APP"
+          xcrun stapler validate "$APP"
+          # Build the dmg from the signed + stapled app
+          create-dmg --icon "$APP_BN" 200 190 --hide-extension "$APP_BN" \
+            --window-size 800 400 --app-drop-link 600 185 \
+            "rustdesk-${{ env.VERSION }}.dmg" "$APP"
+          # Sign, notarize, and staple the dmg itself
+          codesign --force --timestamp \
+            -s "${{ secrets.MACOS_CODESIGN_IDENTITY }}" --strict "rustdesk-${{ env.VERSION }}.dmg" -vvv
+          xcrun notarytool submit "rustdesk-${{ env.VERSION }}.dmg" \
+            --key "${{ github.workspace }}/notary_key.p8" \
+            --key-id "${{ secrets.MACOS_NOTARY_API_KEY_ID }}" \
+            --issuer "${{ secrets.MACOS_NOTARY_API_ISSUER_ID }}" \
+            --wait
+          xcrun stapler staple "rustdesk-${{ env.VERSION }}.dmg"
+          xcrun stapler validate "rustdesk-${{ env.VERSION }}.dmg"
 
       - name: Rename rustdesk
         if: env.UPLOAD_ARTIFACT == 'true'
@@ -865,6 +888,13 @@ jobs:
           for name in rustdesk*??.dmg; do
               mv "$name" "${name%%.dmg}-${{ matrix.job.arch }}.dmg"
           done
+
+      - name: Upload signed macOS dmg
+        if: env.MACOS_P12_BASE64 != null && env.UPLOAD_ARTIFACT == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: rustdesk-signed-macos-${{ matrix.job.arch }}
+          path: rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.dmg
 
       - name: Publish DMG package
         if: false
