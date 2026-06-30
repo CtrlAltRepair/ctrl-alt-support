@@ -118,8 +118,8 @@ jobs:
           f=libs/hbb_common/src/config.rs
           perl -0pi -e 's/RwLock::new\("RustDesk"\.to_owned\(\)\)/RwLock::new("Ctrl Alt Support".to_owned())/' "$f"
           perl -0pi -e 's/&\["rs-ny\.rustdesk\.com"\]/&["support.ctrlaltrepair.com"]/' "$f"
-          perl -0pi -e 's/OeVuKk5nlHiXp\+APNn0Y3pC1Iwpwn44JGqrQCsWqmBw=/v30irCuJA85ZaZnFIMC4Ne6Uzcz9vYPVnmbGx4PCrV4=/' "$f"
-          grep -q "Ctrl Alt Support" "$f" && grep -q "support.ctrlaltrepair.com" "$f" && grep -q "v30irCuJA85" "$f" || { echo "BRAND PATCH FAILED — strings not found (submodule changed?)"; exit 1; }
+          perl -0pi -e 's/OeVuKk5nlHiXp\+APNn0Y3pC1Iwpwn44JGqrQCsWqmBw=/77r7AVtxvxjzfTZBm4cHC2kWMiD3WCBhaDjrcGCxv20=/' "$f"
+          grep -q "Ctrl Alt Support" "$f" && grep -q "support.ctrlaltrepair.com" "$f" && grep -q "77r7AVtxvx" "$f" || { echo "BRAND PATCH FAILED — strings not found (submodule changed?)"; exit 1; }
           echo "== brand patch applied =="; grep -nE 'APP_NAME: RwLock|RENDEZVOUS_SERVERS|RS_PUB_KEY' "$f"
 
       - name: Restore bridge files
@@ -683,8 +683,8 @@ jobs:
           f=libs/hbb_common/src/config.rs
           perl -0pi -e 's/RwLock::new\("RustDesk"\.to_owned\(\)\)/RwLock::new("Ctrl Alt Support".to_owned())/' "$f"
           perl -0pi -e 's/&\["rs-ny\.rustdesk\.com"\]/&["support.ctrlaltrepair.com"]/' "$f"
-          perl -0pi -e 's/OeVuKk5nlHiXp\+APNn0Y3pC1Iwpwn44JGqrQCsWqmBw=/v30irCuJA85ZaZnFIMC4Ne6Uzcz9vYPVnmbGx4PCrV4=/' "$f"
-          grep -q "Ctrl Alt Support" "$f" && grep -q "support.ctrlaltrepair.com" "$f" && grep -q "v30irCuJA85" "$f" || { echo "BRAND PATCH FAILED — strings not found (submodule changed?)"; exit 1; }
+          perl -0pi -e 's/OeVuKk5nlHiXp\+APNn0Y3pC1Iwpwn44JGqrQCsWqmBw=/77r7AVtxvxjzfTZBm4cHC2kWMiD3WCBhaDjrcGCxv20=/' "$f"
+          grep -q "Ctrl Alt Support" "$f" && grep -q "support.ctrlaltrepair.com" "$f" && grep -q "77r7AVtxvx" "$f" || { echo "BRAND PATCH FAILED — strings not found (submodule changed?)"; exit 1; }
           # macOS: build.py hardcodes RustDesk.app when copying the service binary into the bundle; point it at the renamed app (quote the space)
           perl -0pi -e 's{service \./build/macos/Build/Products/Release/RustDesk\.app/Contents/MacOS/}{service "./build/macos/Build/Products/Release/Ctrl Alt Support.app/Contents/MacOS/"}' build.py
           grep -q 'Ctrl Alt Support.app/Contents/MacOS' build.py || { echo "build.py app-path patch FAILED"; exit 1; }

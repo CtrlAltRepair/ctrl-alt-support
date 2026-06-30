@@ -18,7 +18,7 @@ Corbel (body) / Corbert (display) — brand fonts. (App keeps its bundled UI fon
 ## Naming / text
 - App name: **Ctrl Alt Support**
 - Footer/credit: **"Powered by Ctrl Alt Repair"** (never "Powered by RustDesk")
-- Server (baked in): `support.ctrlaltrepair.com`, key `v30irCuJA85ZaZnFIMC4Ne6Uzcz9vYPVnmbGx4PCrV4=`
+- Server (baked in): `support.ctrlaltrepair.com`, key `77r7AVtxvxjzfTZBm4cHC2kWMiD3WCBhaDjrcGCxv20=`
 
 ## Icon
 Brand mark = the **Ctrl / Alt / Repair keyboard keys** (OneDrive `Logos/CtrlAltRepair_Logo_v3.7.png` and round badge `Logo - Keyboard Keys Design.png`). App icon: keyboard-keys mark on an `#FF4100` rounded square (macOS/Windows app-icon style). No stock RustDesk blue-circle icon.
