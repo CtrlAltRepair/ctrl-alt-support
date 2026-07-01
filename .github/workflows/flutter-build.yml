@@ -121,6 +121,10 @@ jobs:
           perl -0pi -e 's/OeVuKk5nlHiXp\+APNn0Y3pC1Iwpwn44JGqrQCsWqmBw=/77r7AVtxvxjzfTZBm4cHC2kWMiD3WCBhaDjrcGCxv20=/' "$f"
           grep -q "Ctrl Alt Support" "$f" && grep -q "support.ctrlaltrepair.com" "$f" && grep -q "77r7AVtxvx" "$f" || { echo "BRAND PATCH FAILED — strings not found (submodule changed?)"; exit 1; }
           echo "== brand patch applied =="; grep -nE 'APP_NAME: RwLock|RENDEZVOUS_SERVERS|RS_PUB_KEY' "$f"
+          # Ctrl Alt Support: guard the in-repo source fixes against upstream regressions
+          if grep -qF '<string>/bin/sh</string>' src/platform/privileges_scripts/daemon.plist; then echo "GUARD FAIL: daemon.plist sh -c wrapper reintroduced (space-in-path service bug)"; exit 1; fi
+          grep -qF '_svcIsUsingPublicServer.value = false;' flutter/lib/desktop/pages/connection_page.dart || { echo "GUARD FAIL: setup_server_tip suppression missing"; exit 1; }
+          grep -qF 'sc start \"' src/platform/windows.rs || { echo "GUARD FAIL: windows service name not quoted"; exit 1; }
 
       - name: Restore bridge files
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -689,6 +693,10 @@ jobs:
           perl -0pi -e 's{service \./build/macos/Build/Products/Release/RustDesk\.app/Contents/MacOS/}{service "./build/macos/Build/Products/Release/Ctrl Alt Support.app/Contents/MacOS/"}' build.py
           grep -q 'Ctrl Alt Support.app/Contents/MacOS' build.py || { echo "build.py app-path patch FAILED"; exit 1; }
           echo "== brand patch applied =="; grep -nE 'APP_NAME: RwLock|RENDEZVOUS_SERVERS|RS_PUB_KEY' "$f"
+          # Ctrl Alt Support: guard the in-repo source fixes against upstream regressions
+          if grep -qF '<string>/bin/sh</string>' src/platform/privileges_scripts/daemon.plist; then echo "GUARD FAIL: daemon.plist sh -c wrapper reintroduced (space-in-path service bug)"; exit 1; fi
+          grep -qF '_svcIsUsingPublicServer.value = false;' flutter/lib/desktop/pages/connection_page.dart || { echo "GUARD FAIL: setup_server_tip suppression missing"; exit 1; }
+          grep -qF 'sc start \"' src/platform/windows.rs || { echo "GUARD FAIL: windows service name not quoted"; exit 1; }
 
       - name: Import the codesign cert
         if: env.MACOS_P12_BASE64 != null
