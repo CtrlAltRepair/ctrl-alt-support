@@ -75,7 +75,7 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
               // Ctrl Alt Support: positive confirmation in place of the upstream
               // "set up your own server" nag — this build always ships a
               // baked-in custom rendezvous server.
-              ', connected to Ctrl Alt Repair server',
+              ', connected to the Ctrl Alt Repair server',
               style: TextStyle(fontSize: em),
             ),
           ),
