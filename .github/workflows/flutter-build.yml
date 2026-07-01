@@ -123,7 +123,7 @@ jobs:
           echo "== brand patch applied =="; grep -nE 'APP_NAME: RwLock|RENDEZVOUS_SERVERS|RS_PUB_KEY' "$f"
           # Ctrl Alt Support: guard the in-repo source fixes against upstream regressions
           if grep -qF '<string>/bin/sh</string>' src/platform/privileges_scripts/daemon.plist; then echo "GUARD FAIL: daemon.plist sh -c wrapper reintroduced (space-in-path service bug)"; exit 1; fi
-          grep -qF '_svcIsUsingPublicServer.value = false;' flutter/lib/desktop/pages/connection_page.dart || { echo "GUARD FAIL: setup_server_tip suppression missing"; exit 1; }
+          grep -qF 'connected to Ctrl Alt Repair server' flutter/lib/desktop/pages/connection_page.dart || { echo "GUARD FAIL: branded server confirmation missing"; exit 1; }
           grep -qF 'sc start \"' src/platform/windows.rs || { echo "GUARD FAIL: windows service name not quoted"; exit 1; }
 
       - name: Restore bridge files
@@ -695,7 +695,7 @@ jobs:
           echo "== brand patch applied =="; grep -nE 'APP_NAME: RwLock|RENDEZVOUS_SERVERS|RS_PUB_KEY' "$f"
           # Ctrl Alt Support: guard the in-repo source fixes against upstream regressions
           if grep -qF '<string>/bin/sh</string>' src/platform/privileges_scripts/daemon.plist; then echo "GUARD FAIL: daemon.plist sh -c wrapper reintroduced (space-in-path service bug)"; exit 1; fi
-          grep -qF '_svcIsUsingPublicServer.value = false;' flutter/lib/desktop/pages/connection_page.dart || { echo "GUARD FAIL: setup_server_tip suppression missing"; exit 1; }
+          grep -qF 'connected to Ctrl Alt Repair server' flutter/lib/desktop/pages/connection_page.dart || { echo "GUARD FAIL: branded server confirmation missing"; exit 1; }
           grep -qF 'sc start \"' src/platform/windows.rs || { echo "GUARD FAIL: windows service name not quoted"; exit 1; }
 
       - name: Import the codesign cert
