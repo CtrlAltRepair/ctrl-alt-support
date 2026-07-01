@@ -124,7 +124,7 @@ jobs:
           # Ctrl Alt Support: guard the in-repo source fixes against upstream regressions
           if grep -qF '<string>/bin/sh</string>' src/platform/privileges_scripts/daemon.plist; then echo "GUARD FAIL: daemon.plist sh -c wrapper reintroduced (space-in-path service bug)"; exit 1; fi
           grep -qF 'connected to Ctrl Alt Repair server' flutter/lib/desktop/pages/connection_page.dart || { echo "GUARD FAIL: branded server confirmation missing"; exit 1; }
-          grep -qF 'sc start \"' src/platform/windows.rs || { echo "GUARD FAIL: windows service name not quoted"; exit 1; }
+          if grep -nE 'sc (create|start|stop|delete) \{' src/platform/windows.rs; then echo "GUARD FAIL: unquoted sc <name> in windows.rs (space-in-name bug)"; exit 1; fi
 
       - name: Restore bridge files
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -696,7 +696,7 @@ jobs:
           # Ctrl Alt Support: guard the in-repo source fixes against upstream regressions
           if grep -qF '<string>/bin/sh</string>' src/platform/privileges_scripts/daemon.plist; then echo "GUARD FAIL: daemon.plist sh -c wrapper reintroduced (space-in-path service bug)"; exit 1; fi
           grep -qF 'connected to Ctrl Alt Repair server' flutter/lib/desktop/pages/connection_page.dart || { echo "GUARD FAIL: branded server confirmation missing"; exit 1; }
-          grep -qF 'sc start \"' src/platform/windows.rs || { echo "GUARD FAIL: windows service name not quoted"; exit 1; }
+          if grep -nE 'sc (create|start|stop|delete) \{' src/platform/windows.rs; then echo "GUARD FAIL: unquoted sc <name> in windows.rs (space-in-name bug)"; exit 1; fi
 
       - name: Import the codesign cert
         if: env.MACOS_P12_BASE64 != null
