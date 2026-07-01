@@ -712,14 +712,16 @@ jobs:
           security default-keychain -s rustdesk.keychain
           security find-identity -v
 
-      - name: Import notarize key
+      - name: Import notarize key (App Store Connect API .p8)
         if: env.MACOS_P12_BASE64 != null
         uses: timheuer/base64-to-file@adaa40c0c581f276132199d4cf60afa07ce60eac # v1.2
         with:
+          # Ctrl Alt Support: decode the ASC API private key (.p8). rustdesk.json is
+          # assembled from this + the issuer/key IDs in the notarize step below.
           # https://gregoryszorc.com/docs/apple-codesign/stable/apple_codesign_rcodesign.html#notarizing-and-stapling
-          fileName: rustdesk.json
+          fileName: AuthKey.p8
           fileDir: ${{ github.workspace }}
-          encodedString: ${{ secrets.MACOS_NOTARIZE_JSON }}
+          encodedString: ${{ secrets.MACOS_NOTARY_API_KEY_P8_BASE64 }}
 
       - name: Install rcodesign tool
         if: env.MACOS_P12_BASE64 != null
@@ -864,6 +866,8 @@ jobs:
           codesign --force --options runtime -s ${{ secrets.MACOS_CODESIGN_IDENTITY }} --deep --strict ./flutter/build/macos/Build/Products/Release/RustDesk.app -vvv
           create-dmg --icon "RustDesk.app" 200 190 --hide-extension "RustDesk.app" --window-size 800 400 --app-drop-link 600 185 rustdesk-${{ env.VERSION }}.dmg ./flutter/build/macos/Build/Products/Release/RustDesk.app
           codesign --force --options runtime -s ${{ secrets.MACOS_CODESIGN_IDENTITY }} --deep --strict rustdesk-${{ env.VERSION }}.dmg -vvv
+          # Ctrl Alt Support: assemble the rcodesign unified API-key JSON from the ASC key components (issuer id + key id + .p8)
+          rcodesign encode-app-store-connect-api-key --output-path ${{ github.workspace }}/rustdesk.json "${{ secrets.MACOS_NOTARY_API_ISSUER_ID }}" "${{ secrets.MACOS_NOTARY_API_KEY_ID }}" ${{ github.workspace }}/AuthKey.p8
           # notarize the rustdesk-${{ env.VERSION }}.dmg
           rcodesign notary-submit --api-key-path ${{ github.workspace }}/rustdesk.json  --staple rustdesk-${{ env.VERSION }}.dmg
 
