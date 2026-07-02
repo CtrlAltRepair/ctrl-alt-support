@@ -52,7 +52,7 @@ env:
   # 2. Update the `VCPKG_COMMIT_ID` in `ci.yml` and `playground.yml`.
   VCPKG_COMMIT_ID: "120deac3062162151622ca4860575a33844ba10b"
   ARMV7_VCPKG_COMMIT_ID: "6f29f12e82a8293156836ad81cc9bf5af41fe836" # 2025.01.13, got "/opt/artifacts/vcpkg/vcpkg: No such file or directory" with latest version
-  VERSION: "1.4.11"
+  VERSION: "1.4.12"
   NDK_VERSION: "r28c"
   #signing keys env variable checks
   ANDROID_SIGNING_KEY: "${{ secrets.ANDROID_SIGNING_KEY }}"
@@ -132,6 +132,8 @@ jobs:
           grep -qF 'Color(0xFFFF4100)' flutter/lib/desktop/pages/desktop_setting_page.dart || { echo "GUARD FAIL: About card not brand orange"; exit 1; }
           grep -qF 'Ctrl Alt Repair LLC' flutter/lib/desktop/pages/desktop_setting_page.dart || { echo "GUARD FAIL: copyright not rebranded"; exit 1; }
           grep -qF 'run for branded (custom) clients too' flutter/lib/common.dart || { echo "GUARD FAIL: checkUpdate custom-client gate may have returned"; exit 1; }
+          grep -qF 'CompanyName", "Ctrl Alt Repair LLC' flutter/windows/runner/Runner.rc || { echo "GUARD FAIL: Windows exe CompanyName not branded"; exit 1; }
+          grep -qF 'Ctrl Alt Repair LLC' flutter/macos/Runner/Configs/AppInfo.xcconfig || { echo "GUARD FAIL: Mac copyright not branded"; exit 1; }
 
       - name: Restore bridge files
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -366,7 +368,11 @@ jobs:
         if: env.UPLOAD_ARTIFACT == 'true'
         run: |
           pushd ./res/msi
-          python preprocess.py --arp -d ../../rustdesk
+          # Ctrl Alt Support: brand the MSI (name/manufacturer/version) and rename the flutter
+          # binary to the branded exe so the MSI installs "Ctrl Alt Support.exe". The portable
+          # packer above still used rustdesk.exe; WiX/Windows Installer handles the space natively.
+          Move-Item ../../rustdesk/rustdesk.exe "../../rustdesk/Ctrl Alt Support.exe"
+          python preprocess.py --arp --app-name "Ctrl Alt Support" --manufacturer "Ctrl Alt Repair LLC" -v ${{ env.VERSION }} -d ../../rustdesk
           nuget restore msi.sln
           $msiPlatform = if ('${{ matrix.job.arch }}' -eq 'aarch64') { 'ARM64' } else { 'x64' }
           msbuild msi.sln -p:Configuration=Release -p:Platform=$msiPlatform /p:TargetVersion=Windows10
@@ -711,6 +717,8 @@ jobs:
           grep -qF 'Color(0xFFFF4100)' flutter/lib/desktop/pages/desktop_setting_page.dart || { echo "GUARD FAIL: About card not brand orange"; exit 1; }
           grep -qF 'Ctrl Alt Repair LLC' flutter/lib/desktop/pages/desktop_setting_page.dart || { echo "GUARD FAIL: copyright not rebranded"; exit 1; }
           grep -qF 'run for branded (custom) clients too' flutter/lib/common.dart || { echo "GUARD FAIL: checkUpdate custom-client gate may have returned"; exit 1; }
+          grep -qF 'CompanyName", "Ctrl Alt Repair LLC' flutter/windows/runner/Runner.rc || { echo "GUARD FAIL: Windows exe CompanyName not branded"; exit 1; }
+          grep -qF 'Ctrl Alt Repair LLC' flutter/macos/Runner/Configs/AppInfo.xcconfig || { echo "GUARD FAIL: Mac copyright not branded"; exit 1; }
 
       - name: Import the codesign cert
         if: env.MACOS_P12_BASE64 != null
