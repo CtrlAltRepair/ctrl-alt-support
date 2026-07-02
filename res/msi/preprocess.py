@@ -458,11 +458,13 @@ def init_global_vars(dist_dir, app_name, args):
     dist_app = dist_dir.joinpath(app_name + ".exe")
 
     def read_process_output(args):
+        # Ctrl Alt Support: list-form (no shell) so a spaced exe path like
+        # "Ctrl Alt Support.exe" is passed as one arg, not split at the space
+        # (was shell=True with an unquoted f-string, which broke branded builds).
         process = subprocess.Popen(
-            f"{dist_app} {args}",
+            [str(dist_app), *args.split()],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            shell=True,
         )
         output, _ = process.communicate()
         return output.decode("utf-8").strip()
